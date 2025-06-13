@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Shocker Display</title>
+    <style>
+	body {
+	    background-color: #fefefe;
+	    color: #333;
+	    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+	    padding: 40px;
+	}
+
+        .container {
+            max-width: 700px;
+            margin: auto;
+        }
+
+        .section, .settings-box {
+            border: 1px solid #ccc;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            background-color: #f9f9f9;
+
+	h1{
+	    text-align: center;
+        }
+
+	form {
+	    margin: 20px auto;
+	    max-width: 400px;
+	}
+	
+	input[type="text"],
+	input[type="file"] {
+	    padding: 10px;
+	    width: 80%;
+	    font-size: 1.1rem;
+	    border: 2px solid #FFDB00;
+	    border-radius: 6px;
+	    background-color: #1a1a1a;
+	    color: #FFDB00;
+	}
+
+	input[type="submit"],
+	button[type="submit"] {
+	    margin-top: 15px;
+	    padding: 10px 20px;
+	    font-size 1rem;
+	    background-color: #FFDB00;
+	    color: #000;
+	    border: none;
+	    border-radius: 6px;
+	    cursor: pointer;
+	}
+
+	input[type="submit"]:hover,
+	button[type="submit"]:hover {
+	    background-color: #e0ab00;
+	}
+
+	.footer {
+	    margin-top: 50px;
+	    font-size: 0.9rem;
+	    color: #777;
+	}
+
+	button[type="submit"] {
+	    margin-top: 15px;
+	    padding: 10px 20px;
+	    font-size: 1rem;
+	    background-color: #FFDB00;
+	    color: #000;
+	    border: none;
+	    border-radius: 6px;
+	    cursor: pointer;
+	}
+	
+	button[type="submit"]:hover {
+	    background-color: #e6c200;
+	}
+    </style>
+</head>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+     // select all forms
+     document.querySelectorAll('form').forEach(form => {
+         form.addEventListener('submit', function() {
+             // Disable all buttons on any form submit
+             document.querySelectorAll("button").forEach(btn => {
+                 btn.disabled = true;
+                 btn.innerText = "Updating...";
+             });
+         });
+     });
+});
+</script>
+<script>
+document.getElementById("calendar-form").addEventListener("submit", function (e) {
+    const url = document.getElementById("calendar-url").value.trim();
+    const file = document.getElementById("calendar-file").files.length;
+    if (!url && file === 0) {
+        e.preventDefault();
+        alert("Please provide either a calendar url or upload an .ics file.")
+    }
+});
+</script>
+
+<body>
+    <h1>Welcome to The DashBuddy Interface!</h1>
+    <div class="container">
+        <div class="settings-box">
+            <h2>Settings</h2>
+            <form action="/save-settings" method="POST">
+                <label for="ui_mode">UI Mode:</label>
+                <select name="ui_mode" id="ui_mode">
+                    <option value="light" {{ 'selected' if settings.ui_mode == 'light' else ''}}>Light</option>
+                    <option value="dark" {{ 'selected' if settings.ui_mode == 'dark' else '' }}>Dark</option>
+                </select><br>
+
+                <label for="units">Units:</label>
+                <select name="units" id="units">
+                    <option value="imperial" {{ 'selected' if settings.units == 'imperial' else ''}}>Imperial</option>
+                    <option value="metric" {{ 'selected' if settings.units == 'metric' else '' }}>Metric</option>
+                </select><br>
+
+                <label for="country">Country:</label>
+                <input type="text" name="country" id="country" value="{{ settings.country }}"><br>
+
+                <label for="zipcode">Zip Code:</label>
+                <input type="text" name="zipcode" id="zipcode" value="{{ settings.zipcode }}"><br>
+
+                <button type="submit">Save Settings</button>
+            </form>
+        </div>
+
+        <div class="section">
+            <h2>Upload Image</h2>
+            <p>Send an image to the display. Supported formats are: PNG, JPG</p> 
+            <form action="/upload-image" method="POST" enctype="multipart/form-data">
+                <input type="file" name="image" accept="image/*" required>
+                <button type="submit">Upload & Show</button>
+            </form>
+        </div>
+
+        <div class="section">
+            <h2>Calendar</h2>
+            <p>Displays events pulled from Blackboard or optional .ics file</p>
+            <form id="calendar-form" action="/calendar" method="POST" enctype="multipart/form-data">
+                <label for="calendar-url">Calendar URL:</label>
+                <input type="url" name="calendar_url" id="calendar_url" placeholder="https://example.com/my.ics">
+
+                <label for="calendar-file">OR Upload Calendar File (.ics):</label>
+                <input type="file" name="calendar_file" id="calendar-file" accept=".ics">
+
+                <button type="submit">Upload & Show</button>
+            </form>
+        </div>
+
+        <div class="section">
+            <h2>Weather</h2>
+            <p>Displays today's weather and the multi-day forecast</p>
+            <form action="/weather" method="POST">
+                <button type="submit">Show Weather</button>
+            </form>
+        </div> 
+    </div>
+    <div class="footer">
+	Made using vibe coding, thanks to ChatGPT
+    </div>
+</body>
+</html>
