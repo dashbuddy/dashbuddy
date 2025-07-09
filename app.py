@@ -1,4 +1,4 @@
-from flask import Flask, request, redirect, render_template
+from flask import Flask, request, redirect, render_template, flash
 from PIL import Image, ImageDraw, ImageFont
 from inky.auto import auto
 from threading import Event
@@ -8,9 +8,11 @@ from collections import defaultdict
 import os, requests, pykeys, time, textwrap
 
 app = Flask(__name__)
+app.secret_key = pykeys.flask_session_id
 # Define paths for the folder for slideshows and the folder for single pictures
-SLIDESHOW_FOLDER = '/home/pi/shocker-display/web-app/uploads/slideshow'
-UPLOAD_FOLDER = '/home/pi/shocker-display/web-app/uploads/pictures'
+SLIDESHOW_FOLDER = '/home/pi/dashbuddy/uploads/slideshow'
+PICTURES_FOLDER = '/home/pi/dashbuddy/uploads/pictures'
+CALENDAR_FOLDER = '/home/pi/dashbuddy/uploads/calendar'
 # sets display values needed for displaying stuff automagically,
 # by reading from the EEPROM on the display
 inky = auto()
@@ -40,10 +42,6 @@ inky_colors = {
     "fg": (255,255,255) if pykeys.ui_mode == "dark" else (0,0,0),
     "bg": (0,0,0) if pykeys.ui_mode == "dark" else (255,255,255)
 }
-
-# just used for testing the calendar
-with open("test_calendar.ics", "rb") as f:
-    test_ics = Calendar.from_ical(f.read())
 
 # function to outline text that might not be visible due to background
 # accepts: text (string), position (tuple), font (object), color (int), outline_color (int), outline_width (int)
@@ -78,7 +76,6 @@ def check_ui():
     draw = ImageDraw.Draw(img)
 
 def get_calendar(ics_text):
-    calendar = Calendar(ics_text)
     # sort events into
     now = datetime.now(timezone.utc)
     upcoming = []
@@ -96,14 +93,9 @@ def get_calendar(ics_text):
 def display_calendar(ics):
     # sets ui color to correct value
     check_ui()
-    # collects list of upcoming events from blackboard
-    upcoming_list = get_calendar(ics)
     # draw some headers onto the screen
-    draw_outlined_text("Blackboard Schedule", (10,10), font, color=inky_colors["yellow"], outline_color=inky_colors["black"], outline_width=3)
+    draw_outlined_text("Schedule", (10,10), font, color=inky_colors["yellow"], outline_color=inky_colors["black"], outline_width=3)
     draw.text((400,10), "Upcoming Events:", inky_colors["fg"], font=font)
-    # draw the next 3 upcoming events to the top of the screen
-    for idx, event in enumerate(upcoming_list[:3]):
-        draw.text((400,35*(idx+2)), f"{event.get('dtstart').dt.date()} - {event.get('summary')}", inky_colors["fg"], font=small_font)  
     # get the dates for the next 5 days
     days = collect_next_days(5)
     # set sizing and placement constants
@@ -111,39 +103,52 @@ def display_calendar(ics):
     box_height = HEIGHT // 2
     dot_y = 50
     dot_radius = 5
-    # iterate through the 5 days we gathered earlier and draw a box for each
-    for idx, day in enumerate(days):
-        col = idx % 5
-        row = 1
-        box_x = col * box_width
-        box_y = row * box_height
+    try:
+        # collects list of upcoming events from blackboard
+        upcoming_list = get_calendar(ics)
+        # draw the next 3 upcoming events to the top of the screen
+        for idx, event in enumerate(upcoming_list[:3]):
+            draw.text((400,35*(idx+2)), f"{event.get('dtstart').dt.date()} - {event.get('summary')}", inky_colors["fg"], font=small_font)  
 
-        draw.rectangle([box_x, box_y, box_x + box_width, box_y + box_height], outline=inky_colors["fg"], width=3)
-        draw.text((box_x + 4, box_y + 4), day.strftime("%b %d"), font=font, fill=inky_colors["fg"])
-        # create a list of events happening on this day
-        daily_events = [e for e in upcoming_list if e.get('dtstart').dt.date() == day]
-        cy = box_y + 40
-        # iterate through the events on this day, limited at 2
-        for i, event in enumerate(daily_events[:2]):
-            title = str(event.get('summary'))
-            date = event.get('dtstart').dt.strftime("%I:%M %p")
-            text = f"<{date}> {title}"
+        # iterate through the 5 days we gathered earlier and draw a box for each
+        for idx, day in enumerate(days):
+            col = idx % 5
+            row = 1
+            box_x = col * box_width
+            box_y = row * box_height
 
-            cx = box_x + 10
-            # draw black outline for dot and then the colored dot on top
-            draw.ellipse((cx - dot_radius+1, cy - dot_radius+1, cx + dot_radius+1, cy + dot_radius+1), fill=inky_colors["black"])
-            draw.ellipse((cx - dot_radius, cy - dot_radius, cx + dot_radius, cy + dot_radius), fill=inky_colors["yellow"])
+            draw.rectangle([box_x, box_y, box_x + box_width, box_y + box_height], outline=inky_colors["fg"], width=3)
+            draw.text((box_x + 4, box_y + 4), day.strftime("%b %d"), font=font, fill=inky_colors["fg"])
+            # create a list of events happening on this day
+            daily_events = [e for e in upcoming_list if e.get('dtstart').dt.date() == day]
+            if not daily_events:
+                return "No upcoming events found"
+            cy = box_y + 40
+            # iterate through the events on this day, limited at 2
+            for i, event in enumerate(daily_events[:2]):
+                title = str(event.get('summary'))
+                date = event.get('dtstart').dt.strftime("%I:%M %p")
+                text = f"<{date}> {title}"
 
-            wrapped = textwrap.wrap(text, width=10)
-            for line in wrapped:
-                draw.text((cx + 2 * dot_radius + 4, cy - 10), line, inky_colors["fg"], font=small_font)
-                cy += 25
-            cy += 5
+                cx = box_x + 10
+                # draw black outline for dot and then the colored dot on top
+                draw.ellipse((cx - dot_radius+1, cy - dot_radius+1, cx + dot_radius+1, cy + dot_radius+1), fill=inky_colors["black"])
+                draw.ellipse((cx - dot_radius, cy - dot_radius, cx + dot_radius, cy + dot_radius), fill=inky_colors["yellow"])
 
-    # tell the display to update and show stuff
-    display.set_image(img)
-    display.show()
+                wrapped = textwrap.wrap(text, width=10)
+                for line in wrapped:
+                    draw.text((cx + 2 * dot_radius + 4, cy - 10), line, inky_colors["fg"], font=small_font)
+                    cy += 25
+                cy += 5
 
+        # tell the display to update and show stuff
+        display.set_image(img)
+        display.show()
+        # if the program maade it this far, return "None" to indicate no error
+        return None
+
+    except Exception as e:
+        return f"WARNING: ics file may be corrupt, outdated, missing, or empty"
 
 def get_weather(type):
     # queries the weather api and parses data
@@ -190,7 +195,7 @@ def display_weather():
     # parse data for the weather data gathering we did earlier
     weather_main = weather["weather"][0]["main"].lower()
     description = weather["weather"][0]["description"].capitalize()
-    icon_path = f"/home/pi/shocker-display/web-app/static/icons/{weather_main}.png"
+    icon_path = f"static/icons/{weather_main}.png"
     temp = round(weather["main"]["temp"])
     feels_like = round(weather["main"]["feels_like"])
     humidity = weather["main"]["humidity"]
@@ -312,7 +317,7 @@ def save_settings():
 def update_image():
     file = request.files["image"]
     if file:
-        path = os.path.join(UPLOAD_FOLDER, "latest.png")
+        path = os.path.join(PICTURES_FOLDER, "latest.png")
         file.save(path)
 
         #resize and show on display
@@ -326,14 +331,26 @@ def update_image():
 @app.route('/calendar', methods=["POST"])
 def update_calendar():
     calendar_url = request.form.get("calendar_url")
-    calendar_file = request.form.get("calendar_file")
+    calendar_file = request.files.get("calendar_file")
+    status_message = None
 
     # handle ics from url
-    ics_data = requests.get(calendar_url).text
+    if calendar_url:
+        try:
+            ics_data = requests.get(calendar_url).text
+            status_message = display_calendar(ics_data)
+        except Exception as e:
+            status_message = f"Failed to fetch calendar: {e}"
     # handle ics from file upload
-    if calendar_file:
+    elif calendar_file and calendar_file.filename != "":
+        path = os.path.join(CALENDAR_FOLDER, "latest.ics")
+        calendar_file.save(path)
+        calendar_file.stream.seek(0)
         ics_data = calendar_file.read().decode("utf-8")
-    display_calendar(ics_data)
+        status_message = display_calendar(ics_data)
+
+    if status_message:
+        flash(status_message, category="warning")
 
     return redirect("/")
 
@@ -347,22 +364,6 @@ def home():
     settings = pykeys.load_settings()
     return render_template("index.html", settings=settings)
 
-    '''
-    if request.method == "POST":
-        file = request.files["image"]
-        if file:
-            path = os.path.join(UPLOAD_FOLDER, "latest.png")
-            file.save(path)
-
-            # Resize and show on Inky
-            img = Image.open(path).convert("RGB")
-            img = img.resize(inky.resolution)
-            inky.set_image(img)
-            inky.show()
-
-            return redirect("/")
-    return render_template("index.html")
-    '''
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)

@@ -1,0 +1,32 @@
+ * Serving Flask app 'app'
+ * Debug mode: off
+[31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://192.168.68.70:5000
+[33mPress CTRL+C to quit[0m
+192.168.68.59 - - [13/Jun/2025 16:44:25] "GET / HTTP/1.1" 200 -
+[2025-06-13 16:44:34,040] ERROR in app: Exception on /weather [POST]
+Traceback (most recent call last):
+  File "/home/pi/.virtualenvs/pimoroni/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pi/.virtualenvs/pimoroni/lib/python3.11/site-packages/flask/app.py", line 919, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pi/.virtualenvs/pimoroni/lib/python3.11/site-packages/flask/app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pi/.virtualenvs/pimoroni/lib/python3.11/site-packages/flask/app.py", line 902, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pi/dashbuddy/app.py", line 342, in update_weather
+    display_weather()
+  File "/home/pi/dashbuddy/app.py", line 206, in display_weather
+    icon = Image.open(icon_path).convert("RGBA")
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pi/.virtualenvs/pimoroni/lib/python3.11/site-packages/PIL/Image.py", line 3505, in open
+    fp = builtins.open(filename, "rb")
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: '/home/pi/shocker-display/web-app/static/icons/clear.png'
+192.168.68.59 - - [13/Jun/2025 16:44:34] "[35m[1mPOST /weather HTTP/1.1[0m" 500 -

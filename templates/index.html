@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>Shocker Display</title>
+    <title>Dashbuddy Interface</title>
     <style>
 	body {
 	    background-color: #fefefe;
@@ -11,6 +11,15 @@
 	    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
 	    padding: 40px;
 	}
+
+        .flash.warning {
+            background-color: #ffddcc;
+            color: #660000;
+            padding: 10px;
+            border: 1px solid #cc6666;
+            margin-bottom: 10px;
+            border-radius: 5px;
+        }
 
         .container {
             max-width: 700px;
@@ -23,8 +32,9 @@
             padding: 20px;
             margin-bottom: 20px;
             background-color: #f9f9f9;
+        }
 
-	h1{
+	h1 {
 	    text-align: center;
         }
 
@@ -40,7 +50,7 @@
 	    font-size: 1.1rem;
 	    border: 2px solid #FFDB00;
 	    border-radius: 6px;
-	    background-color: #1a1a1a;
+	    background-color: #5B5B5B;
 	    color: #FFDB00;
 	}
 
@@ -98,18 +108,16 @@ document.addEventListener('DOMContentLoaded', function() {
      });
 });
 </script>
-<script>
-document.getElementById("calendar-form").addEventListener("submit", function (e) {
-    const url = document.getElementById("calendar-url").value.trim();
-    const file = document.getElementById("calendar-file").files.length;
-    if (!url && file === 0) {
-        e.preventDefault();
-        alert("Please provide either a calendar url or upload an .ics file.")
-    }
-});
-</script>
 
 <body>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="flash {{ category }}">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
     <h1>Welcome to The DashBuddy Interface!</h1>
     <div class="container">
         <div class="settings-box">
@@ -154,9 +162,9 @@ document.getElementById("calendar-form").addEventListener("submit", function (e)
                 <input type="url" name="calendar_url" id="calendar_url" placeholder="https://example.com/my.ics">
 
                 <label for="calendar-file">OR Upload Calendar File (.ics):</label>
-                <input type="file" name="calendar_file" id="calendar-file" accept=".ics">
+                <input type="file" name="calendar_file" id="calendar_file" accept=".ics">
 
-                <button type="submit">Upload & Show</button>
+                <button id="calendar-submit" type="submit">Upload & Show</button>
             </form>
         </div>
 
@@ -171,5 +179,27 @@ document.getElementById("calendar-form").addEventListener("submit", function (e)
     <div class="footer">
 	Made using vibe coding, thanks to ChatGPT
     </div>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const form = document.getElementById("calendar-form");
+  const submitButton = document.getElementById("calendar-submit");
+
+  form.addEventListener("submit", function (e) {
+    const url = document.getElementById("calendar-url").value.trim();
+    const file = document.getElementById("calendar-file").files.length;
+
+    if ((url && file > 0) || (!url && file === 0)) {
+      e.preventDefault();  // block the form
+      alert("Please provide either a calendar URL or upload a .ics file — not both.");
+      return;  // exits before setting loading text
+    }
+
+    // only runs if validation passes
+    submitButton.disabled = true;
+    submitButton.innerText = "Loading...";
+  });
+});
+</script>
+
 </body>
 </html>
